@@ -9,6 +9,7 @@ Convds.py was provided by Britton Smith, the version of filament.py is a modifie
 radprofile.py is deprecated and in an ugly state.
 
 There are known issues:
+
   Currently many of the parallel modules are broken due to some form of bug with yt parallal_analysis_interface,
   a script that should fix this has been included, but the other scripts will need slight reworks.
   
@@ -17,6 +18,7 @@ There are known issues:
   A lot of the code needs sanitised of hard coded variables, such as the directory data is stored/loaded from
   
   Some code lacks meaningful commentary
+  
   Code is not uniform in style/syntax or variable naming.
 
   A lot of debugging statements remain within the code - these should be tided up
