@@ -8,6 +8,7 @@ import filsep
 import probmap
 import yt.units as u
 from yt import YTArray
+from yt import YTQuantity
 import parallel_analysis_interface as ytpar
 yt.enable_parallelism()
 ytpar.enable_parallelism()
@@ -74,9 +75,7 @@ def get_masses(dens_profiles,x,filaments,ds,accumulate=False):
 def plot_vel(filament,ds,dataset,fil=-1,maskarray=False):
     #Routine to plot velocity of particles along a filament
     #Set gravitational constant
-    G = 6.67408E-11
-    G = YTArray(G,'m**3/(kg*(s**2))')
-    print G
+    G = YTQuantity(6.67408E-11,'m**3/(kg * s**2)')
     #Gather velocity and density values from disk, done in parallel to speed computation
     #We first gather a list of the profiles on the disk, then reshape this into a list of [density,other] profiles
     #This is then iterated over in parallel to load the correct data
@@ -96,13 +95,13 @@ def plot_vel(filament,ds,dataset,fil=-1,maskarray=False):
         segnum = int(file_in_dir[0][13:16])
         #Calc total density for each segment 
         densprof = yt.load(''.join(['/shome/mackie/data/',dataset,'/profiles/',file_in_dir[0]]))
-        dm = densprof.data['dark_matter_density']
-        dens = densprof.data['density']
+        dm = densprof.data['dark_matter_density'].in_units('g/cm**3')
+        dens = densprof.data['density'].in_units('g/cm**3')
         totaldens = dm + dens
         del densprof,dm,dens
         #Get velocity profiles
         velprof = yt.load(''.join(['/shome/mackie/data/',dataset,'/profiles/',file_in_dir[1]]))
-        vel = velprof.data['cylindrical_radial_velocity']
+        vel = velprof.data['cylindrical_radial_velocity'].in_units('km/s')
 
         stor.result = (vel,totaldens)
         stor.result_id = (filnum,segnum)
@@ -114,25 +113,28 @@ def plot_vel(filament,ds,dataset,fil=-1,maskarray=False):
     vel_profs = [ [] for i in range(len(filament))]
     densprofs = [ [] for i in range(len(filament))]
     x = yt.load(''.join(['/shome/mackie/data/',dataset,'/profiles/',file_in_dir[0]])).data['x']
-    xarr = [ [] for i in range(len(filament))]
+    xarr = [[] for i in range(len(filament))]
     for key,values in sorted(storage.items()):
         filnum,segnum = key
         vel,dens = values
         xarr[filnum].append(x.in_units('Mpc'))
+        
         vel_profs[filnum].append(vel.in_units('km/s'))
         densprofs[filnum].append(dens)
-    xarr=np.array(xarr)
-    xarr=YTArray(xarr,'Mpc')
+    for i in range(len(xarr)):
+        xarr[i] = YTArray(np.array(xarr[i]),'Mpc')
+        vel_profs[i] = YTArray(np.array(vel_profs[i]),'km/s')
+    vel_profs = YTArray(np.array(vel_profs),'km/s')
+    xarr = YTArray(np.array(xarr),'Mpc')
     del storage
     #Turn into np arrays for QoL
-    vel_profs = np.array(vel_profs)
     densprofs = np.array(densprofs)
     #Gather x bins from disk
     
     #Determine masses and thus escape velocities
     
       
-    mass =[get_masses(densprofs[i],x,filament[i],ds,accumulate=True) for i in range(len(filament))]
+    mass = [get_masses(densprofs[i],x,filament[i],ds,accumulate=True) for i in range(len(filament))]
 
     mass = np.array(mass)
     mass = YTArray(mass,'g')
@@ -140,19 +142,23 @@ def plot_vel(filament,ds,dataset,fil=-1,maskarray=False):
     
     del densprofs
     
+    print xarr[1][1]
 
+    vel_ratio = ( ( (2*G* mass) / xarr) ** (1.0/2.0))
+    vel_ratio = vel_ratio.in_units('km/s')
 
-    vel_ratio = YTArray(((2*G * mass / xarr) ** (1/2.0))).in_units('km/s')
     if yt.is_root():                        
+        print mass[1][1]
+        print xarr[1][1]
         print vel_ratio[1][1]
-        print vel_profs[1][1]
+        
 #vel_ratio is **approx** escape vel, used to ratio later
     #Generate ratio of velocity to escape velocity
-    vel_profs = (vel_profs/vel_ratio)
-
+    vel_profs = (vel_profs.in_units('km/s')/vel_ratio.in_units('km/s'))
     del vel_ratio
-
     
+
+
 
     if fil > -1:
         
@@ -171,7 +177,7 @@ def plot_vel(filament,ds,dataset,fil=-1,maskarray=False):
     vel_profs = np.array(vel_prof_flatten)
     del vel_prof_flatten
 
-    plot = probmap.prob_heat_map(vel_profs,'cylindrical_radial_velocity',x=x)
+    plot = probmap.prob_heat_map(vel_profs,'radial_velocity',x=x)
     
     return plot,length_plot
 
