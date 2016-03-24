@@ -6,6 +6,8 @@ The code is in python and depends on yt, numpy and matplotlib.
 
 Convds.py was provided by Britton Smith, the version of filament.py is a modified script of which the original also originates from Britton Smith.
 
+All code needs to revised to be brought up to PEP8 standard
+
 radprofile.py is deprecated and in an ugly state.
 
 There are known issues:
